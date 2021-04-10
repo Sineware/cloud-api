@@ -30,10 +30,15 @@ const updatePackageSchema = {
         "status": {
             "description": "The status of the update (ex. fresh or ready, used for auto-updates)",
             "type": "string"
+        },
+        "setPointer": {
+            "description": "Whether or not to set the product:variant:channel pointer to this update",
+            "type": "boolean"
         }
 
+
     },
-    "required": [ "uuid", "product", "variant", "channel", "build", "hash", "status" ]
+    "required": [ "uuid", "product", "variant", "channel", "build", "hash", "status", "setPointer" ]
 }
 
 module.exports = {

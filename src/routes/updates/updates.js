@@ -2,16 +2,19 @@ const express = require('express');
 const fileUpload = require('express-fileupload');
 const { v4: uuidv4, validate: uuidValidate } = require('uuid');
 const Ajv = require("ajv").default;
-const ajv = new Ajv()
+const fs = require('fs');
 
+const ajv = new Ajv()
 const router = express.Router();
 const redis = require('../../db');
-
 const {updatePackageSchema} = require("./schemas");
+const authenticateRoute = require("../../authentication");
 
 const prefix = process.env.SERVER_API_PREFIX + "update"
 
-router.use(fileUpload());
+router.use(fileUpload({
+    createParentPath: true
+}));
 
 // Get an update (/update)
 router.get(prefix, async (req, res) => {
@@ -28,36 +31,38 @@ router.get(prefix, async (req, res) => {
 });
 // Get all updates (/update/all)
 router.get(prefix + "/all", async (req, res) => {
-    const stream = redis.scanStream({match: "update:*"});
-    let keyList = [];
+    let uuidList = await redis.lrange("update:list", 0, -1);
     let updateList = [];
-    stream.on("data", (resultKeys) => {
-        keyList = keyList.concat(resultKeys);
-    });
-    stream.on("end", async () => {
-        for(let key of keyList) {
-            try {
-                let update = await redis.hgetall(key)
-                updateList.push(update)
-            } catch (e) {}
-        }
-        res.send(updateList);
-    });
+    for(let uuid of uuidList) {
+        try {
+            let update = await redis.hgetall("update:" + uuid)
+            updateList.push(update)
+        } catch (e) {}
+    }
+    await res.send(updateList);
 });
 
 // Push an update to the server (/update)
 // Authenticated route.
 // Requires a update package to be uploaded first (/upload)
-router.post(prefix, async (req, res) => {
+router.post(prefix, authenticateRoute, async (req, res) => {
     const validateUpdatePackage = ajv.compile(updatePackageSchema)
-    if(!validateUpdatePackage(req.body) || !uuidValidate(req.body.uuid)) {
+    if(!validateUpdatePackage(req.body)) {
         return res.status(400).send({error: validateUpdatePackage.errors});
+    }
+    if(!uuidValidate(req.body.uuid)) {
+        return res.status(400).send({error: "A valid UUID was not provided"});
+    }
+    if(!fs.existsSync(process.env.SERVER_HOME + "files/updates/" + req.body.uuid)) {
+        return res.status(400).send({error: "File with that UUID does not exist on the server."});
     }
     let update = req.body;
     try {
         await redis.hset("update:" + update.uuid, update);
         // Set the pointer for update:product:variant:channel
-        await redis.set("update:" + update.product + ":" + update.variant + ":" + update.channel, update.uuid)
+        // todo add to update:list (and allow not setting channel pointer)
+        await redis.lpush("update:list", update.uuid);
+        if(update.setPointer) await redis.set("update:" + update.product + ":" + update.variant + ":" + update.channel, update.uuid);
         res.send(update);
     } catch (e) {
         console.error("Failed to add update package to redis!");
@@ -65,9 +70,25 @@ router.post(prefix, async (req, res) => {
         return res.status(500).send({error: e.message});
     }
 });
-
+// Delete an update from the system
+// Authenticated route.
+router.delete(prefix, authenticateRoute, async (req, res) => {
+    if(typeof req.body.uuid == "undefined" || !uuidValidate(req.body.uuid)) {
+        return res.status(400).send({error: "A valid UUID was not provided"});
+    }
+    let uuid = req.body.uuid;
+    try {
+        await redis.del("update:" + uuid);
+        res.send({uuid})
+    } catch (e) {
+        console.error("Failed to delete update by UUID");
+        console.error(e);
+        res.status(500).send({error: e.message});
+    }
+})
 // Upload the update package to the server. (/update/upload)
-router.post(prefix + "/upload", async (req, res) => {
+// Authenticated route.
+router.post(prefix + "/upload", authenticateRoute, async (req, res) => {
     if (!req.files || Object.keys(req.files).length === 0) {
         return res.status(400).send('No files were uploaded.');
     }
@@ -85,10 +106,9 @@ router.post(prefix + "/upload", async (req, res) => {
 });
 
 // Download the update package given a UUID (/update/download)
-// Authenticated route.
 router.get(prefix + "/download", async (req, res) => {
     if(typeof req.body.uuid == "undefined" || !uuidValidate(req.body.uuid)) {
-        return res.status(400).send({error: "No valid UUID provided"});
+        return res.status(400).send({error: "A valid UUID was not provided"});
     }
     await res.sendFile("./files/updates/" + req.body.uuid, {root: process.env.SERVER_HOME});
 });

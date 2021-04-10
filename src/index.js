@@ -17,10 +17,11 @@
  */
 require('dotenv').config()
 const redis = require('./db');
-
 const express = require('express');
+const path = require('path');
+
 const app = express();
-const port = process.env.SERVER_PORT;
+const port = process.env.PORT;
 
 const serverVer  = "1";
 const updateRoutes = require("./routes/updates/updates");
@@ -30,12 +31,9 @@ async function main() {
     console.log("Redis Info:");
     console.log(res)
 
-    app.get('/', (req, res) => {
-        res.send('Sineware Cloud API Server v' + serverVer)
-    });
-
     // Basic Middleware
     app.use(express.json());
+    app.use('/', express.static(path.join(__dirname, 'public')))
 
     // Update endpoints
     app.use(updateRoutes);
