@@ -106,11 +106,11 @@ router.post(prefix + "/upload", authenticateRoute, async (req, res) => {
 });
 
 // Download the update package given a UUID (/update/download)
-router.get(prefix + "/download", async (req, res) => {
-    if(typeof req.body.uuid == "undefined" || !uuidValidate(req.body.uuid)) {
+router.get(prefix + "/download/:uuid", async (req, res) => {
+    if(typeof req.params.uuid == "undefined" || !uuidValidate(req.params.uuid)) {
         return res.status(400).send({error: "A valid UUID was not provided"});
     }
-    await res.sendFile("./files/updates/" + req.body.uuid, {root: process.env.SERVER_HOME});
+    await res.sendFile("./files/updates/" + req.params.uuid, {root: process.env.SERVER_HOME});
 });
 
 

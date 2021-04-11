@@ -32,6 +32,5 @@ Endpoint /update/all:
 Endpoint /update/upload: 
 * POST: (Send the update package file as form data with name "update_package") Authenticated route.
                
-Endpoint /update/download: 
-* POST: (Download the update package file given a UUID)
-    * Body: `{"uuid": "some uuid"}` downloads the file.
+Endpoint "/update/download/:uuid": 
+* GET: (Download the update package file given a UUID)
