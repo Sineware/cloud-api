@@ -25,6 +25,7 @@ const port = process.env.PORT;
 
 const serverVer  = "1";
 const updateRoutes = require("./routes/updates/updates");
+const websiteRoutes = require("./routes/website/website")
 
 async function main() {
     let res = await redis.info();
@@ -32,14 +33,19 @@ async function main() {
     console.log(res)
 
     // Basic Middleware
+    app.use(function(req, res, next) {
+        res.header('X-Powered-By', "Sineware Cloud");
+        next();
+    });
     app.use(express.json());
     app.use('/', express.static(path.join(__dirname, 'public')))
 
     // Update endpoints
     app.use(updateRoutes);
+    app.use(websiteRoutes);
 
     app.listen(port, () => {
-        console.log(`HTTP Server listening at http://localhost:${port}`);
+        console.log(`HTTP Server listening at http://0.0.0.0:${port}`);
     });
 
 }

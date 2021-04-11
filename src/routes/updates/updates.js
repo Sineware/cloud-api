@@ -20,12 +20,12 @@ router.use(fileUpload({
 router.get(prefix, async (req, res) => {
     if(typeof req.body.uuid != "undefined" && uuidValidate(req.body.uuid)) {
         let uuid = req.body.uuid;
-        let update = await redis.hgetall("update:" + uuid)
+        let update = await redis.hgetall("update:" + uuid);
         res.send(update);
     } else {
         let updateReq = req.body;
         let updateUUID = await redis.get("update:" + updateReq.product + ":" + updateReq.variant + ":" + updateReq.channel);
-        let update = await redis.hgetall("update:" + updateUUID)
+        let update = await redis.hgetall("update:" + updateUUID);
         res.send(update);
     }
 });
@@ -35,8 +35,8 @@ router.get(prefix + "/all", async (req, res) => {
     let updateList = [];
     for(let uuid of uuidList) {
         try {
-            let update = await redis.hgetall("update:" + uuid)
-            updateList.push(update)
+            let update = await redis.hgetall("update:" + uuid);
+            updateList.push(update);
         } catch (e) {}
     }
     await res.send(updateList);
@@ -46,7 +46,7 @@ router.get(prefix + "/all", async (req, res) => {
 // Authenticated route.
 // Requires a update package to be uploaded first (/upload)
 router.post(prefix, authenticateRoute, async (req, res) => {
-    const validateUpdatePackage = ajv.compile(updatePackageSchema)
+    const validateUpdatePackage = ajv.compile(updatePackageSchema);
     if(!validateUpdatePackage(req.body)) {
         return res.status(400).send({error: validateUpdatePackage.errors});
     }
@@ -79,7 +79,7 @@ router.delete(prefix, authenticateRoute, async (req, res) => {
     let uuid = req.body.uuid;
     try {
         await redis.del("update:" + uuid);
-        res.send({uuid})
+        res.send({uuid});
     } catch (e) {
         console.error("Failed to delete update by UUID");
         console.error(e);
@@ -97,11 +97,11 @@ router.post(prefix + "/upload", authenticateRoute, async (req, res) => {
         let uuid = uuidv4();
         let path = process.env.SERVER_HOME + "files/updates/" + uuid;
         await req.files.update_package.mv(path);
-        await res.send({uuid})
+        await res.send({uuid});
     } catch (e) {
        console.error("There was an error moving the uploaded file.");
        console.error(e);
-       res.status(500).send()
+       res.status(500).send();
     }
 });
 
