@@ -1,8 +1,8 @@
 {
   "homepage": {
     "settings": {
-      "logo_image": "https://picsum.photos/1280/170",
-      "background_image": "https://picsum.photos/1920/1080"
+      "logo_image": "https://update.sineware.ca/img/sineware-text-logo.png",
+      "background_image": "https://update.sineware.ca/img/bgfullheader-img.png"
     },
     "sections": {
       "footer": "© 2020 Seshan Ravikumar\nAll trademarks are the property of their respective owners.\n\n<a href=\"https://whc.ca/green-powered/?aff=3153&amp;gbid=1en\"><img src=\"https://s.whc.ca/badges/green-badge-1.svg\" alt=\"Green Hosting Badge\" width=\"130\" /></a>",
