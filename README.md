@@ -1,6 +1,7 @@
 # Sineware Cloud API Server
 The Sineware Cloud API Server:
 * Update Services for ProLinux
+* Website/Frontend Content
 * And some other stuff eventually
 
 Environment Variables:
