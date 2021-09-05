@@ -20,12 +20,14 @@ const redis = require('./db');
 const express = require('express');
 const path = require('path');
 
+
 const app = express();
 const port = process.env.PORT;
 
 const serverVer  = "1";
 const updateRoutes = require("./routes/updates/updates");
-const websiteRoutes = require("./routes/website/website")
+const websiteRoutes = require("./routes/website/website");
+const authenticateRoute = require("./authentication");
 
 async function main() {
     let res = await redis.info();
@@ -43,6 +45,9 @@ async function main() {
     // Update endpoints
     app.use(updateRoutes);
     app.use(websiteRoutes);
+    app.get("/test", authenticateRoute, async (req, res) => {
+        res.send({success: true, message: "ehe te nandayo"});
+    });
 
     app.listen(port, () => {
         console.log(`HTTP Server listening at http://0.0.0.0:${port}`);
