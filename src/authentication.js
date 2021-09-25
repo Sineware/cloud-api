@@ -19,4 +19,4 @@ async function authenticateRoute(req, res, next) {
     }
 }
 
-module.exports = authenticateRoute
+module.exports = {authenticateRoute}

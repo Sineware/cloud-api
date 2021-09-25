@@ -8,7 +8,7 @@ const ajv = new Ajv()
 const router = express.Router();
 const redis = require('../../db');
 const {updatePackageSchema} = require("./schemas");
-const authenticateRoute = require("../../authentication");
+const {authenticateRoute} = require("../../authentication");
 
 const prefix = process.env.SERVER_API_PREFIX + "update"
 
