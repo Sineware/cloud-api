@@ -19,4 +19,16 @@ async function authenticateRoute(req, res, next) {
     }
 }
 
-module.exports = {authenticateRoute}
+async function authenticateDevice(token) {
+    const {body} = await got.post(process.env.AUTHSERVER_URL + '/verify/device', {
+        json: { token },
+        responseType: 'json'
+    });
+    if(body.success) {
+        return body;
+    } else {
+        return false;
+    }
+}
+
+module.exports = {authenticateRoute, authenticateDevice}
