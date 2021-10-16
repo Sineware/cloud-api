@@ -29,18 +29,21 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                     if(msg.payload.type === "user") {
                         // Register user as online
                         console.log("User Registering: " + msg.payload.token);
-                        as = await authenticateUser();
+                        as = await authenticateUser(msg.payload.token);
                     } else if(msg.payload.type === "device") {
                         // Register user as online
                         console.log("Device Registering: " + msg.payload.token);
-                        as = await authenticateDevice();
+                        as = await authenticateDevice(msg.payload.token);
                     } else {
                         throw new Error("Invalid type")
                     }
                     if(!as) {
                         throw new Error("Could not authenticate");
                     } else {
-                        wsSend(as);
+                        wsSend({
+                            action: "hello-ack",
+                            payload: as
+                        });
                     }
                 }
             }

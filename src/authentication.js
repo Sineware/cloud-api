@@ -35,6 +35,7 @@ async function authenticateUser(token) {
         json: { token },
         responseType: 'json'
     });
+    console.log(body)
     if(body.success) {
         return body;
     } else {
