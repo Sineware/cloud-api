@@ -30,5 +30,16 @@ async function authenticateDevice(token) {
         return false;
     }
 }
+async function authenticateUser(token) {
+    const {body} = await got.post(process.env.AUTHSERVER_URL + '/verify/user', {
+        json: { token },
+        responseType: 'json'
+    });
+    if(body.success) {
+        return body;
+    } else {
+        return false;
+    }
+}
 
-module.exports = {authenticateRoute, authenticateDevice}
+module.exports = {authenticateRoute, authenticateDevice, authenticateUser}

@@ -1,4 +1,4 @@
-const {authenticateDevice} = require("../authentication");
+const {authenticateDevice, authenticateUser} = require("../authentication");
 const express = require('express');
 const router = express.Router();
 
@@ -24,13 +24,23 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                     if(msg.payload.token === undefined || msg.payload.info === undefined) {
                         throw new Error("No token or identification info provided")
                     }
-                    // Register user as online
-                    console.log("Device Registered: " + msg.payload.token);
-                    let as = await authenticateDevice();
+
+                    let as;
+                    if(msg.payload.type === "user") {
+                        // Register user as online
+                        console.log("User Registering: " + msg.payload.token);
+                        as = await authenticateUser();
+                    } else if(msg.payload.type === "device") {
+                        // Register user as online
+                        console.log("Device Registering: " + msg.payload.token);
+                        as = await authenticateDevice();
+                    } else {
+                        throw new Error("Invalid type")
+                    }
                     if(!as) {
                         throw new Error("Could not authenticate");
                     } else {
-                        wsSend("YOOOOOOOO POG");
+                        wsSend(as);
                     }
                 }
             }

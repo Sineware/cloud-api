@@ -1,5 +1,5 @@
 # Sineware Cloud Service Websockets Gateway
-The gateway server uses Avro serialized JSON messages.
+The gateway server uses JSON messages.
 
 Send and Receive are from the client perspective unless otherwise noted.
 
@@ -7,10 +7,10 @@ In general, all messages sent to the gateway will be responded to with a "-ack"
 action and success state. 
 
 # Identification
-
+(type: user or device)
 Send:
 ```json
-{"action":  "hello", "payload": {"token": "token_goes_here"} }
+{"action":  "hello", "payload": {"type": "user", "token": "token_goes_here", "info":  {}} }
 ```
 Receive:
 ```json
