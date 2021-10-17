@@ -45,7 +45,20 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                             payload: as
                         });
                     }
-                }
+                } break;
+                case "ping": {
+                    wsSend({
+                        action: "ping-ack",
+                        payload: "pong"
+                    });
+                } break;
+                default:
+                    wsSend({
+                        action: "error",
+                        payload: {
+                            "message": "Invalid Action"
+                        }
+                    })
             }
         } catch(e) {
             wsSend({
