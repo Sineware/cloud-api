@@ -2,17 +2,37 @@ const {authenticateDevice, authenticateUser} = require("../authentication");
 const express = require('express');
 const router = express.Router();
 
+const Device = require("./Device");
+const User = require("./User");
+
 // Proof of Concept API Gateway
 // not suitable for production!
 
-let clients = [];
+/** @type {User[]}*/
+let users = [];
+
+/** @type {Device[]}*/
+let devices = [];
 
 router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
+    /**
+     * This connection type (device or user)
+     * @type {"device"|"user"}
+     */
+    let type;
+
+    /** @type {Device|User} */
+    let self;
+
     ws.on('message', async (msgRaw) => {
         let wsSend = (msgObj) => {
             ws.send(JSON.stringify(msgObj));
         }
-        console.log(msgRaw)
+        let wsSendOther = (msgObj, otherWS) => {
+            otherWS.send(JSON.stringify(msgObj));
+        }
+        console.log(msgRaw);
+
         try {
             let msg = JSON.parse(msgRaw);
             if(msg.action === undefined || msg.payload === undefined) {
@@ -30,22 +50,55 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                         // Register user as online
                         console.log("User Registering: " + msg.payload.token);
                         as = await authenticateUser(msg.payload.token);
+                        if(!as) {
+                            throw new Error("Could not authenticate");
+                        } else {
+                            wsSend({
+                                action: "hello-ack",
+                                payload: as
+                            });
+                        }
                     } else if(msg.payload.type === "device") {
                         // Register user as online
                         console.log("Device Registering: " + msg.payload.token);
                         as = await authenticateDevice(msg.payload.token);
+                        if(!as) {
+                            throw new Error("Could not authenticate");
+                        } else {
+                            devices[as.id] = new Device(as.id, msg.payload.info, ws)
+                            wsSend({
+                                action: "hello-ack",
+                                payload: as
+                            });
+                        }
                     } else {
-                        throw new Error("Invalid type")
-                    }
-                    if(!as) {
-                        throw new Error("Could not authenticate");
-                    } else {
-                        wsSend({
-                            action: "hello-ack",
-                            payload: as
-                        });
+                        throw new Error("Invalid type");
                     }
                 } break;
+
+                case "unsafe-exec-cmd": {
+                    /**
+                     * @typedef {Object} UnsafeExecCmdMsg
+                     * @property {string} deviceID - The target device ID
+                     * @property {string} cmd - The command to execute
+                     */
+                    /** @type {UnsafeExecCmdMsg}*/
+                    let pl = msg.payload;
+
+                    if(devices[pl.deviceID] === null) {
+                        throw "Failed to exec CMD: Device does not exist"
+                    }
+
+                    let target = devices[pl.deviceID];
+                    wsSendOther({
+                        action: "unsafe-exec-cmd",
+                        payload: {
+                            cmd: pl.cmd,
+                            requestUserID: "todo"
+                        }
+                    }, target.ws)
+                } break;
+
                 case "ping": {
                     wsSend({
                         action: "ping-ack",
