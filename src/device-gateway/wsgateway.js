@@ -1,4 +1,4 @@
-const {authenticateDevice, authenticateUser} = require("../authentication");
+const {authenticateDevice, authenticateUser, userHasDevicePermissions, getUserByID, getDeviceByID, userIsInOrg, getDevicesByOrgID} = require("../authentication");
 const express = require('express');
 const router = express.Router();
 
@@ -53,6 +53,10 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                         if(!as) {
                             throw new Error("Could not authenticate");
                         } else {
+                            let userObj = new User(as.id, msg.payload.info, ws);
+                            users[as.id] = userObj;
+                            self = userObj;
+                            type = "user";
                             wsSend({
                                 action: "hello-ack",
                                 payload: as
@@ -65,7 +69,10 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                         if(!as) {
                             throw new Error("Could not authenticate");
                         } else {
-                            devices[as.id] = new Device(as.id, msg.payload.info, ws)
+                            let deviceObj = new Device(as.id, msg.payload.info, ws);
+                            devices[as.id] = deviceObj;
+                            self = deviceObj;
+                            type = "device";
                             wsSend({
                                 action: "hello-ack",
                                 payload: as
@@ -76,6 +83,7 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                     }
                 } break;
 
+                // User -> Device
                 case "unsafe-exec-cmd": {
                     /**
                      * @typedef {Object} UnsafeExecCmdMsg
@@ -85,8 +93,16 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                     /** @type {UnsafeExecCmdMsg}*/
                     let pl = msg.payload;
 
-                    if(devices[pl.deviceID] === null) {
-                        throw "Failed to exec CMD: Device does not exist"
+                    if(self === undefined) {
+                        throw new Error("Not authenticated")
+                    }
+
+                    if(!(await userHasDevicePermissions(self.id, pl.deviceID))) {
+                        throw new Error("Failed to exec CMD: Permission to interact with device denied");
+                    }
+
+                    if(devices[pl.deviceID] === undefined) {
+                        throw new Error("Failed to exec CMD: Device does not exist or is not online");
                     }
 
                     let target = devices[pl.deviceID];
@@ -94,9 +110,68 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                         action: "unsafe-exec-cmd",
                         payload: {
                             cmd: pl.cmd,
-                            requestUserID: "todo"
+                            requestUserID: self.id
                         }
-                    }, target.ws)
+                    }, target.ws);
+                } break;
+
+                // Device -> User
+                case "stream-terminal": {
+                    /**
+                     * @typedef {Object} StreamTerminalMsg
+                     * @property {string} userID - The target user ID
+                     * @property {string} output - A line of terminal output
+                     */
+                    /** @type {StreamTerminalMsg}*/
+                    let pl = msg.payload;
+
+                    if(!(await userHasDevicePermissions(pl.userID, self.id))) {
+                        throw new Error("Failed to stream: Permission to interact with user denied");
+                    }
+
+                    if(users[pl.userID] === undefined) {
+                        throw new Error("Failed to stream: User does not exist or is not online")
+                    }
+                    wsSendOther({
+                        action: "stream-terminal",
+                        payload: {
+                            requestDeviceID: self.id,
+                            output: pl.output
+                        }
+                    }, users[pl.userID].ws)
+                } break;
+
+                case "get-devices": {
+                    /**
+                     * @typedef {Object} GetDevicesMsg
+                     * @property {string} orgID - The org ID
+                     */
+                    /** @type {GetDevicesMsg}*/
+                    let pl = msg.payload;
+
+                    if(self === undefined) {
+                        throw new Error("Not authenticated")
+                    }
+
+                    if(!(await userIsInOrg(self.id, pl.orgID))) {
+                        throw new Error("Failed to get devices: Not authorized for OrgID");
+                    }
+
+                    wsSend({
+                        action: "get-devices-ack",
+                        payload: (await getDevicesByOrgID(pl.orgID))
+                    });
+
+                } break;
+
+                case "get-self": {
+                    if(self === undefined) {
+                        throw new Error("Not authenticated")
+                    }
+                    wsSend({
+                        action: "get-self-ack",
+                        payload: {type, self}
+                    });
                 } break;
 
                 case "ping": {
@@ -105,6 +180,7 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                         payload: "pong"
                     });
                 } break;
+
                 default:
                     wsSend({
                         action: "error",

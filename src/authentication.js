@@ -20,6 +20,7 @@ const got = require("got");
  * @property {string} fullname - User's full name
  * @property {string} displayname - User's display name (nickname)
  * @property {string} statusmsg - User's status message (for display purposes)
+ * @property {string[]} [organizations] - Organization IDs the user is a part of
  */
 
 async function authenticateRoute(req, res, next) {
@@ -43,7 +44,7 @@ async function authenticateRoute(req, res, next) {
 
 /**
  * Authenticate a device from a token, returning its AuthServer object.
- * @param token
+ * @param {string} token - User access token
  * @returns {Promise<ASDevice|boolean>}
  */
 async function authenticateDevice(token) {
@@ -61,7 +62,7 @@ async function authenticateDevice(token) {
 
 /**
  * Authenticate a user from a token, returning its AuthServer object.
- * @param token
+ * @param {string} token - User access token
  * @returns {Promise<ASUser|boolean>}
  */
 async function authenticateUser(token) {
@@ -77,4 +78,79 @@ async function authenticateUser(token) {
     }
 }
 
-module.exports = {authenticateRoute, authenticateDevice, authenticateUser}
+/**
+ * Returns whether a user have permission to interact with a device.
+ * @param {string} userID
+ * @param {string} deviceID
+ * @returns {Promise<boolean>}
+ */
+async function userHasDevicePermissions(userID, deviceID) {
+    /** @type {ASUser} */
+    let user = (await got.get(process.env.AUTHSERVER_URL + '/user/' + userID, { responseType: 'json' })).body;
+    console.log(user)
+
+    /** @type {ASDevice} */
+    let device = (await got.get(process.env.AUTHSERVER_URL + '/device/' + deviceID, { responseType: 'json' })).body;
+    console.log(device);
+
+    return user.organizations.includes(device.orgid);
+}
+
+/**
+ * Returns a user object given an ID.
+ * @param {string} userID
+ * @returns {Promise<ASUser>}
+ */
+async function getUserByID(userID) {
+    /** @type {ASUser} */
+    let user = (await got.get(process.env.AUTHSERVER_URL + '/user/' + userID, { responseType: 'json' })).body;
+    console.log(user)
+    return user;
+}
+
+/**
+ * Returns a device object given an ID.
+ * @param {string} deviceID
+ * @returns {Promise<ASDevice>}
+ */
+async function getDeviceByID(deviceID) {
+    /** @type {ASDevice} */
+    let device = (await got.get(process.env.AUTHSERVER_URL + '/device/' + deviceID, { responseType: 'json' })).body;
+    console.log(device);
+    return device;
+}
+
+/**
+ * Returns all users in an organization
+ * @param {string} orgID
+ * @returns {Promise<ASUser[]>}
+ */
+async function getUsersByOrgID(orgID) {
+    return (await got.get(process.env.AUTHSERVER_URL + '/organization/' + orgID + "/users", {responseType: 'json'})).body;
+}
+
+// todo authenticate
+/**
+ * Returns all devices in an organization
+ * @param {string} orgID
+ * @returns {Promise<ASDevice[]>}
+ */
+async function getDevicesByOrgID(orgID) {
+    return (await got.get(process.env.AUTHSERVER_URL + '/organization/' + orgID + "/devices", {responseType: 'json'})).body;
+}
+
+/**
+ * Returns whether a user is in an organization.
+ * @param {string} userID
+ * @param {string} orgID
+ * @returns {Promise<boolean>}
+ */
+async function userIsInOrg(userID, orgID) {
+    /** @type {ASUser} */
+    let user = (await got.get(process.env.AUTHSERVER_URL + '/user/' + userID, { responseType: 'json' })).body;
+    console.log(user)
+
+    return user.organizations.includes(orgID);
+}
+
+module.exports = {authenticateRoute, authenticateDevice, authenticateUser, userHasDevicePermissions, getUserByID, getDeviceByID, userIsInOrg, getDevicesByOrgID, getUsersByOrgID}
