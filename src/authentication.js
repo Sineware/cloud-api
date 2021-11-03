@@ -23,7 +23,15 @@ const got = require("got");
  * @property {string[]} [organizations] - Organization IDs the user is a part of
  */
 
+/**
+ * Express Middleware for authenticating based on a bearer token.
+ * @param req
+ * @param res
+ * @param next
+ * @returns {Promise<void>}
+ */
 async function authenticateRoute(req, res, next) {
+    // todo check permissions
     if(req.header("Authorization") === undefined) {
         res.status(401).header("WWW-Authenticate", "Bearer").send({success: false, error: "No Token Provided"});
         return
@@ -40,6 +48,21 @@ async function authenticateRoute(req, res, next) {
     } else {
         res.status(401).header("WWW-Authenticate", "Bearer").send({success: false, error: "Invalid Token"});
     }
+}
+
+/**
+ * Authorizer for express-basic-auth (use authorizeAsync: true), using username/password
+ * @param {string} username
+ * @param {string} password
+ * @param {function} cb
+ * @returns {Promise<void>}
+ */
+async function userPassAuthorizer(username, password, cb) {
+    const {body} = await got.post(process.env.AUTHSERVER_URL + '/login', {
+        json: { username, password },
+        responseType: 'json'
+    });
+    cb(null, body.success === true);
 }
 
 /**
@@ -153,4 +176,4 @@ async function userIsInOrg(userID, orgID) {
     return user.organizations.includes(orgID);
 }
 
-module.exports = {authenticateRoute, authenticateDevice, authenticateUser, userHasDevicePermissions, getUserByID, getDeviceByID, userIsInOrg, getDevicesByOrgID, getUsersByOrgID}
+module.exports = {authenticateRoute, authenticateDevice, authenticateUser, userHasDevicePermissions, getUserByID, getDeviceByID, userIsInOrg, getDevicesByOrgID, getUsersByOrgID, userPassAuthorizer}

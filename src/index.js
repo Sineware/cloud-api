@@ -19,7 +19,7 @@ require('dotenv').config()
 const redis = require('./db');
 const express = require('express');
 const path = require('path');
-
+const got = require('got');
 
 const app = express();
 const expressWs = require('express-ws')(app);
@@ -32,9 +32,22 @@ const gatewayRoutes = require("./device-gateway/wsgateway");
 const {authenticateRoute} = require("./authentication");
 
 async function main() {
+
+    /*
+    try {
+        const {body} = await got.get(process.env.AUTHSERVER_URL + '/', { responseType: 'json' });
+    } catch (e) {
+        console.log("Could not connect to AuthServer!");
+        console.error(e.message);
+        process.exit(-1);
+    }*/
+
+
     let res = await redis.info();
     console.log("Redis Info:");
     console.log(res)
+
+    app.set("view engine", "ejs");
 
     // Basic Middleware
     app.use(function(req, res, next) {
