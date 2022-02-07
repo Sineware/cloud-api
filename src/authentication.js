@@ -171,9 +171,10 @@ async function getDevicesByOrgID(orgID) {
 async function userIsInOrg(userID, orgID) {
     /** @type {ASUser} */
     let user = (await got.get(process.env.AUTHSERVER_URL + '/user/' + userID, { responseType: 'json' })).body;
-    console.log(user)
+    console.log("userIsInOrg")
+    console.log(user);
 
-    return user.organizations.includes(orgID);
+    return user.organizations.some(o => o.id === orgID);
 }
 
 module.exports = {authenticateRoute, authenticateDevice, authenticateUser, userHasDevicePermissions, getUserByID, getDeviceByID, userIsInOrg, getDevicesByOrgID, getUsersByOrgID, userPassAuthorizer}

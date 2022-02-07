@@ -168,9 +168,11 @@ router.ws(process.env.SERVER_API_PREFIX + 'gateway', function(ws, req) {
                     if(self === undefined) {
                         throw new Error("Not authenticated")
                     }
+                    // AuthServer User
+                    let asUser = await getUserByID(self.id);
                     wsSend({
                         action: "get-self-ack",
-                        payload: {type, self}
+                        payload: {type, self: asUser}
                     });
                 } break;
 
